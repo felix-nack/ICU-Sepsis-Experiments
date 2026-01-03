@@ -162,3 +162,63 @@ The output table contains:
 - **Steps (M)**: Total environment steps to convergence (in millions)
 - **Average Return**: Mean return over the last 1000 time steps
 - **Converged Seeds**: Fraction of random seeds that reached convergence threshold (0.85)
+
+## Production Experiments
+
+### Experiment Description
+
+This project compares two DQN variants to evaluate the effect of optimistic Q-initialization:
+
+1. **Standard DQN**: Uses constant zero initialization for neural network weights and biases
+2. **DQN with Optimistic Q-Initialization**: Uses Xavier uniform initialization for weights and positive bias initialization (bias_const=1.0) to encourage early exploration
+
+Both experiments use production settings:
+- **8 random seeds**: [0, 1, 2, 3, 4, 5, 6, 7]
+- **500,000 episodes**: Sufficient for convergence analysis
+- **Replay buffer size**: 10,000 transitions
+- **Batch size**: 64
+- **Learning rate**: 0.001
+- **Target network update frequency**: 512 steps
+
+### Running Production Experiments
+
+**On a system with 16 CPU cores**, run both experiments in parallel (leaving 1 core for the system):
+
+```bash
+# Start both experiments simultaneously
+python run/local.py -p src/mainjson.py -j experiments/production_dqn.json -c 7 &
+python run/local.py -p src/mainjson.py -j experiments/production_dqn_optimistic.json -c 7 &
+```
+
+**Estimated runtime**: 30-60 minutes per experiment with 7 parallel threads.
+
+**Monitor progress**:
+```bash
+# Check running processes
+jobs
+
+# View real-time results count
+watch -n 10 'ls -1 results/dqn/*.dw | wc -l && ls -1 results/dqn_optimistic/*.dw | wc -l'
+```
+
+### Processing and Analyzing Results
+
+After all experiments complete, process and analyze the results:
+
+```bash
+# 1. Aggregate results across seeds
+python analysis/process_data.py experiments/production_dqn.json
+python analysis/process_data.py experiments/production_dqn_optimistic.json
+
+# 2. Generate learning curve comparison
+python analysis/learning_curve.py y returns auc experiments/production_dqn.json experiments/production_dqn_optimistic.json
+
+# 3. Calculate convergence metrics (Table 3 style)
+python analysis/convergence_metrics.py experiments/production_dqn.json experiments/production_dqn_optimistic.json
+```
+
+The final comparison will show:
+- Learning curves with confidence intervals
+- Convergence episodes and steps
+- Average return at convergence
+- Success rate across seeds
