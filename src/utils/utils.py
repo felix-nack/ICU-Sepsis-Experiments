@@ -52,13 +52,25 @@ def encode_state_cont(obs, n_states):
     obs = torch.Tensor(obs).float().reshape(-1)
     return obs
     
-def layer_init(layer):
-    # torch.nn.init.orthogonal_(layer.weight, std)
-    # use a constant value to intialize stuff. 
-    torch.nn.init.constant_(layer.weight, 0.0)
-    # torch.nn.init.normal_(layer.weight, mean=0.0, std=1.0)
-    # we are not using a bias unit as of yet. 
-    # torch.nn.init.constant_(layer.bias, bias_const)
+def layer_init(layer, optimistic=False, bias_const=0.0):
+    """Initialize layer weights and bias.
+    
+    Args:
+        layer: Neural network layer to initialize
+        optimistic: If True, use Xavier initialization and positive bias for optimistic Q-values
+        bias_const: Constant value for bias initialization (used when optimistic=True)
+    """
+    if optimistic:
+        # Use Xavier uniform initialization for better gradient flow
+        torch.nn.init.xavier_uniform_(layer.weight)
+        # Set positive bias to encourage exploration through optimistic Q-estimates
+        if layer.bias is not None:
+            torch.nn.init.constant_(layer.bias, bias_const)
+    else:
+        # Original initialization: constant zero
+        torch.nn.init.constant_(layer.weight, 0.0)
+        if layer.bias is not None:
+            torch.nn.init.constant_(layer.bias, 0.0)
     return layer
 
 

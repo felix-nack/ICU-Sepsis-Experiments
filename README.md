@@ -93,7 +93,7 @@ The code is organized as follows:
 ### Running the code using json file. 
 
 Experiments are configured using JSON files that specify algorithm hyperparameters. For example, `experiments/debug.json` contains settings like:
-- `algo`: Algorithm name (e.g., "dqn", "ppo", "sac")
+- `algo`: Algorithm name (e.g., "dqn", "dqn_optimistic", "ppo", "sac")
 - `seed`: List of random seeds for multiple runs (e.g., `[0,1,2,3,4]`)
 - `learning_rate`: Learning rate values to test (can be single value or list)
 - `buffer_size`: Replay buffer size for off-policy algorithms
@@ -101,6 +101,11 @@ Experiments are configured using JSON files that specify algorithm hyperparamete
 - `max_episodes`: Number of training episodes
 
 Parameters specified as lists will generate multiple experiment configurations (Cartesian product). Each combination of parameters with each seed creates a unique experiment.
+
+**Switching between algorithms:** To test a modified algorithm (e.g., DQN with optimistic initialization), simply change the `"algo"` field in `debug.json`:
+```json
+"algo": "dqn_optimistic"
+```
 
 To run a specific experiment configuration:
 
@@ -138,19 +143,21 @@ The above plots the returns using area under the curve (AUC) as a metric to sele
 The plot is created in the `plots` folder.
 
 #### Calculate convergence metrics
-To calculate performance metrics similar to Table 3 in the paper (episodes to convergence, steps to convergence, and average return), use:
+To calculate performance metrics similar to Table 3 in the paper (episodes to convergence, steps to convergence, and average return).
+
+**For testing and development** (quick validation with debug configurations):
 
 ```bash
 python analysis/convergence_metrics.py experiments/debug.json
 ```
 
-For comparing multiple algorithms:
+**For final comparison** (after completing large-scale runs with production settings):
 
 ```bash
 python analysis/convergence_metrics.py experiments/PaperPlots/dqn.json experiments/PaperPlots/ppo.json experiments/PaperPlots/sac.json
 ```
 
-This will output a table with:
+The output table contains:
 - **Episodes (K)**: Number of episodes needed to converge (in thousands)
 - **Steps (M)**: Total environment steps to convergence (in millions)
 - **Average Return**: Mean return over the last 1000 time steps

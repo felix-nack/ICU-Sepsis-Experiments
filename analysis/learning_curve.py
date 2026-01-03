@@ -5,6 +5,7 @@ Status : Complete (not completed the key based best parameter selection part)
 Updates : This files combines all json of the same agent as well
 '''
 import os, sys, time, copy
+from datetime import datetime
 sys.path.append(os.getcwd())
 import matplotlib.pyplot as plt
 
@@ -62,10 +63,14 @@ def  plot(ax , data, label = None , color = None):
 
 fig, axs = plt.subplots(1, figsize = (6, 4 ), dpi = 300)
 
+# Collect algorithm names for filename
+algorithm_names = []
+
 for en, js in enumerate(json_handles):
     run, param , data = find_best(js, data = 'returns', metric = metric, minmax = 'max')
     print(param)
-    agent = param['algo']    
+    agent = param['algo']
+    algorithm_names.append(agent)
     plot(axs, data = data[key_to_plot], label = f"{agent}", color = agent_colors[agent] )
     # plot(axs, data = data["losses"], label = f"{agent}", color = agent_colors[agent] )
     
@@ -89,7 +94,13 @@ fig.tight_layout()
 foldername = './plots'
 create_folder(foldername)
 
+# Create filename with algorithm names and timestamp
+algorithms_str = '_'.join(algorithm_names)
+timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+filename = f'learning_curve_{algorithms_str}_{timestamp}.png'
+
 # get_experiment_name = f"env_type_{param['env_type']}"
 # plt.savefig(f'{foldername}/learning_curve_{get_experiment_name}.pdf', dpi = 300)
-plt.savefig(f'{foldername}/learning_curve.png')
+plt.savefig(f'{foldername}/{filename}')
+print(f"\nPlot saved to: {foldername}/{filename}")
 

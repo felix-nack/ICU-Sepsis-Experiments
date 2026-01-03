@@ -1,6 +1,7 @@
 agent_colors = {
     'ppo' : 'blue',
     'dqn' : 'green',
+    'dqn_optimistic' : 'darkgreen',
     'sac' : 'red',
     'qlearning' : 'orange',
     'sarsa' : 'purple',

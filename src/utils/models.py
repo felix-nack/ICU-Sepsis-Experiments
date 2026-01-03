@@ -55,14 +55,14 @@ class ActorCritic(nn.Module):
     
 
 class QNetwork(nn.Module):
-    def __init__(self, envs):
+    def __init__(self, envs, use_bias=False):
         super().__init__()
         self.n_states = envs.single_observation_space.n
         self.n_actions = envs.single_action_space.n
 
         # Make a tabular policy
     
-        self.network = layer_init(nn.Linear(self.n_states, self.n_actions, bias=False))
+        self.network = layer_init(nn.Linear(self.n_states, self.n_actions, bias=use_bias))
 
        
 
@@ -71,6 +71,27 @@ class QNetwork(nn.Module):
         # mask the non available actions
         if action_masks is not None:
             q_values = q_values - ( (1 - action_masks ) * 1e10)
+        return q_values
+
+
+class QNetworkOptimistic(nn.Module):
+    """Q-Network with optimistic initialization for enhanced exploration."""
+    def __init__(self, envs, bias_const=1.0):
+        super().__init__()
+        self.n_states = envs.single_observation_space.n
+        self.n_actions = envs.single_action_space.n
+
+        # Create linear layer with bias enabled
+        self.network = nn.Linear(self.n_states, self.n_actions, bias=True)
+        
+        # Initialize with Xavier and positive bias for optimistic Q-values
+        layer_init(self.network, optimistic=True, bias_const=bias_const)
+
+    def forward(self, x, action_masks=None):
+        q_values = self.network(x)
+        # Mask non-available actions
+        if action_masks is not None:
+            q_values = q_values - ((1 - action_masks) * 1e10)
         return q_values
 
 
