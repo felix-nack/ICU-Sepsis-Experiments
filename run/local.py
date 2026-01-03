@@ -86,8 +86,8 @@ for f in filename:
 cwd = os.getcwd()
 
 bash_file = f"#!/bin/sh\n" \
-            f"cd {cwd}\n" \
-            f"export PYTHONPATH={cwd}:$PYTHONPATH\n" \
+            f"cd \"{cwd}\"\n" \
+            f"export PYTHONPATH=\"{cwd}:$PYTHONPATH\"\n" \
             f"{parallel_commands[0]}"
 
 print(bash_file)

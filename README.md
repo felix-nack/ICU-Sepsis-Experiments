@@ -21,6 +21,65 @@ Citation:
   url={https://arxiv.org/abs/2406.05646}
 }
 ```
+
+## Prerequisites
+
+### Python Environment Setup
+
+This project requires **Python 3.11** (Python 3.12 is not compatible due to package dependencies).
+
+Create and activate a conda environment:
+
+```bash
+conda create -n deep_reinforcement_learning python=3.11
+conda activate deep_reinforcement_learning
+```
+
+### Install Dependencies
+
+Install required Python packages:
+
+```bash
+pip install -r requirements.txt
+```
+
+**Note**: The requirements include:
+- `numpy==1.25.2` (requires Python ≤3.11)
+- `torch==2.0.1`
+- `gymnasium==0.28.1`
+- `icu-sepsis==2.0.1`
+- Other RL and logging packages
+
+### Install GNU Parallel
+
+GNU parallel is required to run multiple experiment configurations in parallel.
+
+**On macOS:**
+
+```bash
+# Accept Xcode license (if needed)
+sudo xcodebuild -license accept
+
+# Install via Homebrew
+brew install parallel
+```
+
+**On Linux:**
+
+```bash
+# Ubuntu/Debian
+sudo apt-get install parallel
+
+# CentOS/RHEL
+sudo yum install parallel
+```
+
+To silence the citation notice, run once:
+
+```bash
+parallel --citation
+```
+
 ## Code Organization
 
 The code is organized as follows:
@@ -33,12 +92,22 @@ The code is organized as follows:
 
 ### Running the code using json file. 
 
-For example an experiment specified in `experiments/debug.json` can be run using the following command. 
+Experiments are configured using JSON files that specify algorithm hyperparameters. For example, `experiments/debug.json` contains settings like:
+- `algo`: Algorithm name (e.g., "dqn", "ppo", "sac")
+- `seed`: List of random seeds for multiple runs (e.g., `[0,1,2,3,4]`)
+- `learning_rate`: Learning rate values to test (can be single value or list)
+- `buffer_size`: Replay buffer size for off-policy algorithms
+- `batch_size`: Mini-batch size for training
+- `max_episodes`: Number of training episodes
+
+Parameters specified as lists will generate multiple experiment configurations (Cartesian product). Each combination of parameters with each seed creates a unique experiment.
+
+To run a specific experiment configuration:
 
 ```bash
 python src/mainjson.py experiments/debug.json 0
 ```
-The above command will run the first configuration in the `debug.json` file.
+The above command will run the first configuration in the `debug.json` file (configuration index 0).
 
 
 ### Executing a sweep
@@ -67,3 +136,22 @@ python analysis/learning_curve.py y returns auc experiments/debug.json
 The above plots the returns using area under the curve (AUC) as a metric to select the best parameters, for the configurations in the `debug.json` file.
 
 The plot is created in the `plots` folder.
+
+#### Calculate convergence metrics
+To calculate performance metrics similar to Table 3 in the paper (episodes to convergence, steps to convergence, and average return), use:
+
+```bash
+python analysis/convergence_metrics.py experiments/debug.json
+```
+
+For comparing multiple algorithms:
+
+```bash
+python analysis/convergence_metrics.py experiments/PaperPlots/dqn.json experiments/PaperPlots/ppo.json experiments/PaperPlots/sac.json
+```
+
+This will output a table with:
+- **Episodes (K)**: Number of episodes needed to converge (in thousands)
+- **Steps (M)**: Total environment steps to convergence (in millions)
+- **Average Return**: Mean return over the last 1000 time steps
+- **Converged Seeds**: Fraction of random seeds that reached convergence threshold (0.85)
