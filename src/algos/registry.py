@@ -6,8 +6,7 @@ from src.algos.dqn import run_dqn
 from src.algos.sac import run_sac
 from src.algos.qlearning import run_qlearning
 from src.algos.sarsa import run_sarsa
-
-
+from src.algos.dqn_nstep import run_dqn as run_dqn_nstep
 
 
 def get_algo(algo):
@@ -21,6 +20,12 @@ def get_algo(algo):
         return run_qlearning
     elif algo == 'sarsa':
         return run_sarsa
+    elif algo == 'dqn_nstep':
+        return run_dqn_nstep
+    elif algo == 'dqn_nstep10':
+        return run_dqn_nstep
+    elif algo == 'dqn_nstep20':
+        return run_dqn_nstep
     else:
         raise NotImplementedError("Unknown algo {}".format(algo))
 

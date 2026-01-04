@@ -1,3 +1,14 @@
 *.pyc
 
 *.dw
+# Local folders
+.venv/
+.idea/
+__pycache__/
+runs/
+results/
+processed/
+temp/
+*.pcsd
+*.log
+experiments/PaperPlots/dqn_baseline_5seeds_50k.json
