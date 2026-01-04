@@ -240,14 +240,7 @@ python analysis/learning_curve.py y returns auc experiments/production_dqn.json 
 python analysis/convergence_metrics.py experiments/production_dqn.json experiments/production_dqn_optimistic.json
 ```
 
-====================================================================================================    
-CONVERGENCE METRICS (Table 3 style)
-====================================================================================================    
-Algorithm       Episodes (K)    Steps (M)       Average Return       Converged Seeds
-----------------------------------------------------------------------------------------------------    
-DQN             139.6 ± 33.8    1.30 ± 0.33     0.86 ± 0.01          8/8
-DQN_OPTIMISTIC  128.2 ± 13.3    1.31 ± 0.16     0.85 ± 0.01          8/8
-====================================================================================================    
+![alt text](image.png)
 
 Notes:
 - Convergence is defined as when smoothed return exceeds 0.85 and stays stable
