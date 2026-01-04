@@ -52,12 +52,24 @@ def  plot(ax , data, label = None , color = None):
     mean =  data['mean'].reshape(-1)
     mean = smoothen_runs(mean, factor=0.9999)
     stderr =  data['stderr'].reshape(-1)
-    if color is not None:
-        base, = ax.plot(mean, label = label, linewidth = 1, color = color)
+    
+    # Downsample if data is too large (reduces rendering issues)
+    max_points = 10000  # Maximum points to plot
+    if len(mean) > max_points:
+        step = len(mean) // max_points
+        indices = range(0, len(mean), step)
+        mean = mean[indices]
+        stderr = stderr[indices]
+        x_values = list(indices)
     else:
-        base, = ax.plot(mean, label=label, linewidth=1)
+        x_values = range(len(mean))
+    
+    if color is not None:
+        base, = ax.plot(x_values, mean, label = label, linewidth = 1, color = color, marker=None, markersize=0)
+    else:
+        base, = ax.plot(x_values, mean, label=label, linewidth=1, marker=None, markersize=0)
     (low_ci, high_ci) = confidence_interval(mean, stderr)
-    ax.fill_between(range(mean.shape[0]), low_ci, high_ci, color = base.get_color(),  alpha = 0.2  )
+    ax.fill_between(x_values, low_ci, high_ci, color = base.get_color(),  alpha = 0.2  )
 
 
 

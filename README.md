@@ -184,21 +184,44 @@ Both experiments use production settings:
 
 **On a system with 16 CPU cores**, run both experiments in parallel (leaving 1 core for the system):
 
+**On Linux/macOS:**
 ```bash
 # Start both experiments simultaneously
 python run/local.py -p src/mainjson.py -j experiments/production_dqn.json -c 7 &
 python run/local.py -p src/mainjson.py -j experiments/production_dqn_optimistic.json -c 7 &
 ```
 
+**On Windows (PowerShell):**
+```powershell
+# Run DQN experiment (in first PowerShell window)
+.\run\local_windows.ps1 -JsonFiles "experiments/production_dqn.json" -PythonFile "src/mainjson.py" -MaxThreads 7
+
+# Run DQN Optimistic experiment (in second PowerShell window)
+.\run\local_windows.ps1 -JsonFiles "experiments/production_dqn_optimistic.json" -PythonFile "src/mainjson.py" -MaxThreads 7
+```
+
 **Estimated runtime**: 30-60 minutes per experiment with 7 parallel threads.
 
-**Monitor progress**:
+**Monitor progress:**
+
+*Linux/macOS:*
 ```bash
 # Check running processes
 jobs
 
 # View real-time results count
 watch -n 10 'ls -1 results/dqn/*.dw | wc -l && ls -1 results/dqn_optimistic/*.dw | wc -l'
+```
+
+*Windows (PowerShell):*
+```powershell
+# Check results count (run in a separate terminal)
+while ($true) {
+    $dqn = (Get-ChildItem -Path "results/dqn/*.dw" -ErrorAction SilentlyContinue).Count
+    $opt = (Get-ChildItem -Path "results/dqn_optimistic/*.dw" -ErrorAction SilentlyContinue).Count
+    Write-Host "DQN: $dqn | DQN Optimistic: $opt" -ForegroundColor Cyan
+    Start-Sleep -Seconds 10
+}
 ```
 
 ### Processing and Analyzing Results
@@ -217,8 +240,17 @@ python analysis/learning_curve.py y returns auc experiments/production_dqn.json 
 python analysis/convergence_metrics.py experiments/production_dqn.json experiments/production_dqn_optimistic.json
 ```
 
-The final comparison will show:
-- Learning curves with confidence intervals
-- Convergence episodes and steps
-- Average return at convergence
-- Success rate across seeds
+====================================================================================================    
+CONVERGENCE METRICS (Table 3 style)
+====================================================================================================    
+Algorithm       Episodes (K)    Steps (M)       Average Return       Converged Seeds
+----------------------------------------------------------------------------------------------------    
+DQN             139.6 ± 33.8    1.30 ± 0.33     0.86 ± 0.01          8/8
+DQN_OPTIMISTIC  128.2 ± 13.3    1.31 ± 0.16     0.85 ± 0.01          8/8
+====================================================================================================    
+
+Notes:
+- Convergence is defined as when smoothed return exceeds 0.85 and stays stable
+- Average Return is calculated over the last 1000 time steps
+- Values show mean ± std across all seeds
+- 'Converged Seeds' shows how many seeds reached convergence
