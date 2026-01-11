@@ -28,12 +28,12 @@ for ($i = 0; $i -lt $experiments.Count; $i++) {
     
     $start = Get-Date
     
-    .\run\local_windows.ps1 -JsonFiles $exp.File -PythonFile "src/mainjson.py" -MaxThreads 15
+    & "$PSScriptRoot\local_windows.ps1" -JsonFiles $exp.File -PythonFile "src/mainjson.py" -MaxThreads 15
     
     $end = Get-Date
     $duration = $end - $start
     
-    Write-Host "`n✓ Completed: $($exp.Name)" -ForegroundColor Green
+    Write-Host "`nCompleted: $($exp.Name)" -ForegroundColor Green
     Write-Host "Duration: $($duration.ToString('hh\:mm\:ss'))" -ForegroundColor Yellow
     
     # Show progress
