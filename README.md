@@ -162,3 +162,108 @@ The output table contains:
 - **Steps (M)**: Total environment steps to convergence (in millions)
 - **Average Return**: Mean return over the last 1000 time steps
 - **Converged Seeds**: Fraction of random seeds that reached convergence threshold (0.85)
+
+## Large-Scale DQN Variants Comparison Study
+
+### Study Description
+
+This comprehensive study compares **5 DQN variants** to evaluate the effectiveness of different algorithmic improvements on the ICU-Sepsis environment:
+
+1. **Standard DQN** (Baseline) - Classic Deep Q-Network implementation
+2. **DQN with Optimistic Q-Initialization** - Uses Xavier uniform weight initialization and positive bias (bias_const=1.0) to encourage early exploration
+3. **Double DQN** - Decouples action selection from action evaluation to reduce overestimation bias
+4. **DQN with Learning Rate Decay** - Implements linear learning rate decay from initial LR to near-zero over training
+5. **N-Step DQN** - Uses 3-step returns for better credit assignment
+
+All algorithms use **identical hyperparameters** for fair comparison:
+- **39 random seeds** per algorithm (195 total runs)
+- **500,000 episodes** per run
+- **Replay buffer**: 10,000 transitions
+- **Batch size**: 64
+- **Learning rate**: 0.001 (initial)
+- **Exploration**: ε-greedy from 1.0 → 0.001 over 25% of episodes
+- **Target network update**: Every 512 steps
+
+**Estimated runtime**: 13 hours on a 16-core system (15 cores utilized, 1 reserved for system)
+
+### Running the Comparison Study
+
+**Option 1: Sequential Execution (Recommended)**
+
+Runs one algorithm at a time using all 15 cores for maximum throughput per algorithm:
+
+```powershell
+.\run\run_comparison_sequential.ps1
+```
+
+This will:
+- Execute each algorithm sequentially
+- Utilize all 15 cores per algorithm
+- Complete in approximately 13 hours
+- Provide progress updates after each algorithm finishes
+
+**Option 2: Parallel Execution**
+
+Runs all 5 algorithms simultaneously with 3 cores each:
+
+```powershell
+.\run\run_comparison_study.ps1 -CoresPerExperiment 3
+```
+
+This will:
+- Launch 5 separate PowerShell windows
+- Run all algorithms in parallel
+- Complete in approximately 13 hours
+- Higher system load but easier to monitor individual algorithms
+
+### Monitoring Progress
+
+**Check total completed runs:**
+```powershell
+ls results/*/*.dw | Measure-Object | Select-Object -ExpandProperty Count
+```
+
+Expected final count: **195 files** (39 seeds × 5 algorithms)
+
+**Check progress by algorithm:**
+```powershell
+ls results/dqn/*.dw | Measure-Object
+ls results/dqn_optimistic/*.dw | Measure-Object
+ls results/double_dqn/*.dw | Measure-Object
+ls results/dqn_lrdecay/*.dw | Measure-Object
+ls results/dqn_nstep/*.dw | Measure-Object
+```
+
+### Analyzing Results
+
+After all experiments complete:
+
+**1. Aggregate results across seeds:**
+```powershell
+python analysis/process_data.py experiments/comparison_dqn.json
+python analysis/process_data.py experiments/comparison_dqn_optimistic.json
+python analysis/process_data.py experiments/comparison_double_dqn.json
+python analysis/process_data.py experiments/comparison_dqn_lrdecay.json
+python analysis/process_data.py experiments/comparison_dqn_nstep.json
+```
+
+**2. Generate learning curve comparison:**
+```powershell
+python analysis/learning_curve.py y returns auc experiments/comparison_dqn.json experiments/comparison_dqn_optimistic.json experiments/comparison_double_dqn.json experiments/comparison_dqn_lrdecay.json experiments/comparison_dqn_nstep.json
+```
+
+**3. Calculate convergence metrics:**
+```powershell
+python analysis/convergence_metrics.py experiments/comparison_dqn.json experiments/comparison_dqn_optimistic.json experiments/comparison_double_dqn.json experiments/comparison_dqn_lrdecay.json experiments/comparison_dqn_nstep.json
+```
+
+### Expected Outputs
+
+The analysis will generate:
+- **Learning curves** with confidence intervals comparing all 5 algorithms
+- **Convergence metrics table** showing episodes/steps to convergence and average returns
+- **Statistical comparison** across 39 seeds per algorithm for robust conclusions
+
+Results will be saved in:
+- `plots/` - Learning curve visualizations
+- `processed/` - Aggregated data files (.pcsd format)
