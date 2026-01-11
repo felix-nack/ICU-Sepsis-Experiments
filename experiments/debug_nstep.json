@@ -1,5 +1,5 @@
 {
-    "algo" : "dqn_optimistic", 
+    "algo" : "dqn_nstep", 
     "seed": [0,1,2,3,4],
     "max_episodes": 2000,
     "learning_rate": [0.0001],
@@ -8,13 +8,14 @@
     "gamma": 1.0,
     "tau": [0.01],
     "batch_size": [32],
-    "start_e": 1.0,
+    "start_e": [1.0],
     "end_e": [0.05],
     "exploration_fraction": [0.1],
     "learning_starts": 200,
     "train_frequency": 1,
     "target_network_frequency": [512],
-    "bias_const": [1.0],
     "track": false,
-    "use_tensorboard": true
+    "use_tensorboard": true,
+    "n_step": 3
+
 }
