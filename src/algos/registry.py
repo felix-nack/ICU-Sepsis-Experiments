@@ -3,6 +3,7 @@ import os, sys, time
 sys.path.append(os.getcwd())
 from src.algos.ppo import run_ppo
 from src.algos.dqn import run_dqn
+from src.algos.dqn_lrdecay import run_dqn_lrdecay   # adaption for learning rate decay
 from src.algos.dqn_optimistic import run_dqn_optimistic
 from src.algos.double_dqn import run_double_dqn
 from src.algos.sac import run_sac
@@ -16,6 +17,8 @@ def get_algo(algo):
         return run_ppo
     elif algo == 'dqn': # done -- converted to episodes
         return run_dqn
+    elif algo == 'dqn_lrdecay': # adaption for learning rate decay
+        return run_dqn_lrdecay
     elif algo == 'dqn_optimistic': # DQN with optimistic Q-initialization
         return run_dqn_optimistic
     elif algo == 'double_dqn': # Double DQN - decouples action selection from evaluation
