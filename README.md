@@ -267,3 +267,5 @@ The analysis will generate:
 Results will be saved in:
 - `plots/` - Learning curve visualizations
 - `processed/` - Aggregated data files (.pcsd format)
+
+![Results](image.png)
