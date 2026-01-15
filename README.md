@@ -268,4 +268,4 @@ Results will be saved in:
 - `plots/` - Learning curve visualizations
 - `processed/` - Aggregated data files (.pcsd format)
 
-![Results](image.png)
+![Results](image-1.png)

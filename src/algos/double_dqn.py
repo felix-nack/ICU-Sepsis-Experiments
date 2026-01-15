@@ -121,9 +121,9 @@ def run_double_dqn(args, use_tensorboard=False, use_wandb=False):
 
         # TRY NOT TO MODIFY: record rewards for plotting purposes
         if terminated:
-            # Extract episode info from infos (gymnasium API)
-            total_reward = float(infos['episode']['r'][0])
-            episode_length = int(infos['episode']['l'][0])
+            # Extract episode info from infos (gymnasium vector API, consistent with dqn.py)
+            total_reward = infos['final_info'][0]['episode']['r']
+            episode_length = infos['final_info'][0]['episode']['l']
             total_return = total_reward * (args.gamma**(episode_length-1)) # we only have reward at the end
             returns_[episode_number] = total_reward
             discounted_returns_[episode_number] = total_return
