@@ -1,3 +1,26 @@
+# ICU-Sepsis DQN Variants - Course Project
+
+## Project Overview
+
+This repository contains work for a university course on **Deep Reinforcement Learning** at TUM. The project involves taking an existing research publication that applies deep reinforcement learning and implementing algorithmic modifications to improve performance.
+
+### Base Research
+
+We build upon the [ICU-Sepsis: A Benchmark MDP Built from Real Medical Data](https://arxiv.org/abs/2406.05646) paper, which found that **DQN achieved the best results** among tested algorithms on the ICU-Sepsis environment.
+
+### Our Modifications
+
+We implemented **four DQN variants** to investigate different improvement strategies:
+
+1. **Optimistic DQN** - Positive Q-initialization for enhanced exploration through Xavier weight initialization and positive bias
+2. **Double DQN** - Reduced Q-value overestimation by decoupling action selection from evaluation
+3. **DQN + Learning Rate Decay** - Stabilized learning over time through linear LR decay
+4. **N-Step DQN** - Faster reward propagation using 3-step returns for better credit assignment
+
+All variants are compared against the **Standard DQN baseline** using 39 random seeds per algorithm (195 total experiments) to ensure statistical robustness.
+
+---
+
 # The ICU-Sepsis Environment (Baseline Algorithms Implementation)
 
 The **ICU-Sepsis** environment is a reinforcement learning environment that
@@ -82,15 +105,19 @@ parallel --citation
 
 ## Code Organization
 
-The code is organized as follows:
+The repository is structured as follows:
 
-`experiments`: Contains the JSON files containing the hyperparameters and configurations for the different methods. 
+- **`experiments/`** - JSON configuration files specifying hyperparameters and experiment settings
+- **`src/`** - Source code for DQN variants and baseline algorithms
+- **`run/`** - Scripts for executing experiments (local and distributed)
+- **`analysis/`** - Data processing, visualization, and convergence analysis tools
+- **`results/`** - Raw experimental results (one file per seed/configuration)
+- **`processed/`** - Aggregated data across seeds
+- **`plots/`** - Generated visualizations and learning curves
 
-`src`: Contains the source code for different algorithms. 
+## Quick Start
 
-`run`: Contains the scripts to run the experiments.
-
-### Running the code using json file. 
+### Running Experiments with JSON Configuration
 
 Experiments are configured using JSON files that specify algorithm hyperparameters. For example, `experiments/debug.json` contains settings like:
 - `algo`: Algorithm name (e.g., "dqn", "dqn_optimistic", "ppo", "sac")
@@ -115,53 +142,60 @@ python src/mainjson.py experiments/debug.json 0
 The above command will run the first configuration in the `debug.json` file (configuration index 0).
 
 
-### Executing a sweep
-Using GNU parallel we can run multiple configurations in parallel. 
+### Executing Parameter Sweeps
+
+To run multiple configurations in parallel using GNU Parallel:
 
 ```bash
 python run/local.py -p src/mainjson.py -j experiments/debug.json
 ``` 
-The above command will try to run all possible configurations in parallel. One can limit the number of threads based on their system using `-c` flag. 
 
-The results for the experiments are stored in `results` folder. Each file in the results folder stores a single hyperparameter configuration with a single seed value. 
+This executes all parameter combinations in parallel. Limit concurrent threads using the `-c` flag based on your system resources.
 
-#### Process results
-We then need to aggregate the results across different seeds using the following command. 
+Results are stored in the `results/` directory, with one file per hyperparameter configuration and seed.
+
+### Analysis Workflow
+
+#### 1. Aggregate Results Across Seeds
+
+Aggregate raw results across different random seeds:
 
 ```bash
 python analysis/process_data.py experiments/debug.json
 ```
 
-#### Plot the results
-Finally, we can plot the results using the following command. 
+This produces aggregated statistics in the `processed/` directory.
+
+#### 2. Generate Learning Curves
+
+Visualize learning curves with confidence intervals:
 
 ```bash
 python analysis/learning_curve.py y returns auc experiments/debug.json
 ```
-The above plots the returns using area under the curve (AUC) as a metric to select the best parameters, for the configurations in the `debug.json` file.
 
-The plot is created in the `plots` folder.
+This plots returns using area under the curve (AUC) for hyperparameter selection. Plots are saved to `plots/`.
 
-#### Calculate convergence metrics
+#### 3. Calculate Convergence Metrics
 To calculate performance metrics similar to Table 3 in the paper (episodes to convergence, steps to convergence, and average return).
 
-**For testing and development** (quick validation with debug configurations):
+**Development/Debugging:**
 
 ```bash
 python analysis/convergence_metrics.py experiments/debug.json
 ```
 
-**For final comparison** (after completing large-scale runs with production settings):
+**Production Analysis:**
 
 ```bash
 python analysis/convergence_metrics.py experiments/PaperPlots/dqn.json experiments/PaperPlots/ppo.json experiments/PaperPlots/sac.json
 ```
 
-The output table contains:
-- **Episodes (K)**: Number of episodes needed to converge (in thousands)
-- **Steps (M)**: Total environment steps to convergence (in millions)
-- **Average Return**: Mean return over the last 1000 time steps
-- **Converged Seeds**: Fraction of random seeds that reached convergence threshold (0.85)
+**Output Metrics:**
+- **Episodes (K)** - Episodes to convergence (thousands)
+- **Steps (M)** - Total environment steps to convergence (millions)
+- **Average Return** - Mean return over final 1000 steps
+- **Converged Seeds** - Fraction reaching convergence threshold (0.85)
 
 ## Large-Scale DQN Variants Comparison Study
 
@@ -190,48 +224,45 @@ All algorithms use **identical hyperparameters** for fair comparison:
 
 **Option 1: Sequential Execution (Recommended)**
 
-Runs one algorithm at a time using all 15 cores for maximum throughput per algorithm:
+Execute algorithms sequentially using all available cores per algorithm:
 
-```powershell
-.\run\run_comparison_sequential.ps1
+```bash
+./run/run_comparison_sequential.ps1
 ```
 
-This will:
-- Execute each algorithm sequentially
-- Utilize all 15 cores per algorithm
-- Complete in approximately 13 hours
-- Provide progress updates after each algorithm finishes
+**Features:**
+- Maximum throughput per algorithm (15 cores)
+- Estimated runtime: ~13 hours
+- Progress updates after each algorithm completes
 
 **Option 2: Parallel Execution**
 
-Runs all 5 algorithms simultaneously with 3 cores each:
+Run all algorithms simultaneously with distributed cores:
 
-```powershell
-.\run\run_comparison_study.ps1 -CoresPerExperiment 3
+```bash
+./run/run_comparison_study.ps1 -CoresPerExperiment 3
 ```
 
-This will:
-- Launch 5 separate PowerShell windows
-- Run all algorithms in parallel
-- Complete in approximately 13 hours
-- Higher system load but easier to monitor individual algorithms
+**Features:**
+- 5 parallel processes (3 cores each)
+- Estimated runtime: ~13 hours
+- Individual monitoring per algorithm
+- Higher system resource utilization
 
 ### Monitoring Progress
 
-**Check total completed runs:**
-```powershell
-ls results/*/*.dw | Measure-Object | Select-Object -ExpandProperty Count
+**Total completed runs:**
+```bash
+ls results/*/*.dw | wc -l
 ```
 
-Expected final count: **195 files** (39 seeds × 5 algorithms)
+Expected: **195 files** (39 seeds × 5 algorithms)
 
-**Check progress by algorithm:**
-```powershell
-ls results/dqn/*.dw | Measure-Object
-ls results/dqn_optimistic/*.dw | Measure-Object
-ls results/double_dqn/*.dw | Measure-Object
-ls results/dqn_lrdecay/*.dw | Measure-Object
-ls results/dqn_nstep/*.dw | Measure-Object
+**Progress by algorithm:**
+```bash
+for dir in dqn dqn_optimistic double_dqn dqn_lrdecay dqn_nstep; do
+  echo "$dir: $(ls results/$dir/*.dw 2>/dev/null | wc -l)/39"
+done
 ```
 
 ### Analyzing Results
@@ -239,7 +270,7 @@ ls results/dqn_nstep/*.dw | Measure-Object
 After all experiments complete:
 
 **1. Aggregate results across seeds:**
-```powershell
+```bash
 python analysis/process_data.py experiments/comparison_dqn.json
 python analysis/process_data.py experiments/comparison_dqn_optimistic.json
 python analysis/process_data.py experiments/comparison_double_dqn.json
@@ -247,25 +278,33 @@ python analysis/process_data.py experiments/comparison_dqn_lrdecay.json
 python analysis/process_data.py experiments/comparison_dqn_nstep.json
 ```
 
-**2. Generate learning curve comparison:**
-```powershell
-python analysis/learning_curve.py y returns auc experiments/comparison_dqn.json experiments/comparison_dqn_optimistic.json experiments/comparison_double_dqn.json experiments/comparison_dqn_lrdecay.json experiments/comparison_dqn_nstep.json
+**2. Generate comparative learning curves:**
+```bash
+python analysis/learning_curve.py y returns auc \
+  experiments/comparison_dqn.json \
+  experiments/comparison_dqn_optimistic.json \
+  experiments/comparison_double_dqn.json \
+  experiments/comparison_dqn_lrdecay.json \
+  experiments/comparison_dqn_nstep.json
 ```
 
 **3. Calculate convergence metrics:**
-```powershell
-python analysis/convergence_metrics.py experiments/comparison_dqn.json experiments/comparison_dqn_optimistic.json experiments/comparison_double_dqn.json experiments/comparison_dqn_lrdecay.json experiments/comparison_dqn_nstep.json
+```bash
+python analysis/convergence_metrics.py \
+  experiments/comparison_dqn.json \
+  experiments/comparison_dqn_optimistic.json \
+  experiments/comparison_double_dqn.json \
+  experiments/comparison_dqn_lrdecay.json \
+  experiments/comparison_dqn_nstep.json
 ```
 
 ### Expected Outputs
 
-The analysis will generate:
-- **Learning curves** with confidence intervals comparing all 5 algorithms
-- **Convergence metrics table** showing episodes/steps to convergence and average returns
-- **Statistical comparison** across 39 seeds per algorithm for robust conclusions
+**Generated Artifacts:**
+- Learning curves with confidence intervals (5-algorithm comparison)
+- Convergence metrics table (episodes, steps, average returns)
+- Statistical analysis across 39 seeds per algorithm
 
-Results will be saved in:
-- `plots/` - Learning curve visualizations
-- `processed/` - Aggregated data files (.pcsd format)
-
-![Results](image-1.png)
+**Output Locations:**
+- **`plots/`** - Learning curve visualizations (PNG/PDF)
+- **`processed/`** - Aggregated statistics (.pcsd format)
