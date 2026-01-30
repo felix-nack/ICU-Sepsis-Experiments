@@ -21,25 +21,65 @@ from src.utils.models import QNetwork, linear_schedule
 from torch.optim.lr_scheduler import LambdaLR, CosineAnnealingLR
 
 def create_lr_scheduler(optimizer, args, total_updates: int):
+    """
+    Create a learning rate scheduler based on command-line args.
+
+    Parameters
+    ----------
+    optimizer : torch.optim.Optimizer
+        The optimizer whose LR should be scheduled (here: Adam).
+    args : argparse.Namespace
+        Contains user-defined settings, e.g.:
+          - args.lr_decay: 'none' | 'linear' | 'cosine'
+          - args.lr_end: final learning rate (optional)
+          - args.lr_warm_frac: fraction of training with constant LR before decaying (optional, linear only)
+    total_updates : int
+        Number of gradient updates over the whole training run.
+        Important: This scheduler is stepped per gradient update, not per environment step.
+
+    Returns
+    -------
+    torch.optim.lr_scheduler._LRScheduler or None
+        Scheduler instance if decay enabled, else None.
+    """
+
+    # Ready decay mode from args (default: no scheduling)
     decay = getattr(args, "lr_decay", "none")
     if decay is None:
         decay = "none"
     decay = str(decay).lower()
 
+    # Base LR is whatever optimizer currently uses (e.g. args.learning_rate)
     base_lr = optimizer.param_groups[0]["lr"]
+
+    # lr_end = final learning rate after decay, if not set: default is base_lr
     lr_end = float(getattr(args, "lr_end", base_lr))   # default: no decay
+
+    # Avoid division by zero
     total_updates = max(1, int(total_updates))
 
+    # Optional warmm-up fraction
+    # We cap warm_frac at 0.9 so there is always a decay phase left
     warm_frac = float(getattr(args, "lr_warm_frac", 0.0))
     warm_frac = min(max(warm_frac, 0.0), 0.9)
 
+    # if Mode "none": training stays identical to baseline
     if decay == "none":
         return None
 
+    # Linear Decay
     if decay == "linear":
+        # LambdaLR expects a multiplicative factor for the base_lr
+        # factor = lr / base_lr, so the final factor is lr_end / base_lr
         end_factor = lr_end / base_lr
 
         def lr_lambda(update_idx: int):
+            """
+            Compute LR multiplier at a given gradient-update index.
+
+            update_idx goes from 0 ... total_updates.
+            We map it to frac in [0,1] to represent training progress.
+            """
             frac = min(max(update_idx / total_updates, 0.0), 1.0)
 
             # warm phase: keep LR constant
@@ -56,6 +96,7 @@ def create_lr_scheduler(optimizer, args, total_updates: int):
         # Note: cosine with warm_frac isn't built-in here; this is plain cosine over total_updates
         return CosineAnnealingLR(optimizer, T_max=total_updates, eta_min=lr_end)
 
+    # Safety chekc: avoid silent misconfiguration
     raise ValueError(f"Unknown lr_decay='{decay}'. Use none|linear|cosine.")
 
 
@@ -107,12 +148,26 @@ def run_dqn_lrdecay(args, use_tensorboard=False, use_wandb=False):
     q_network = QNetwork(envs).to(device)
     optimizer = optim.Adam(q_network.parameters(), lr=args.learning_rate)
     # added for lr_decay
-    # We step the scheduler once per gradient update (not per env step)
-    # Approx number of updates:
-    # after learning_starts, we update every train_frequency env steps
-    approx_env_steps = args.max_episodes * 11  # ~avg episode length (ICU-Sepsis baseline ~9-11)
+    # Important design choice:
+    #   We call scheduler.step() once per *optimizer update* (i.e., after loss.backward() and optimizer.step()).
+    #   That matches the "total_updates" concept and keeps LR decay independent from episode lengths.
+    #
+    # We estimate total_updates (number of gradient updates) based on:
+    #   total env steps ≈ max_episodes * avg_episode_length
+    #   start learning after args.learning_starts
+    #   update every args.train_frequency steps
+
+
+    # Approx env steps based on domain knowledge (ICU-Sepsis avg episode length ~9-11)
+    approx_env_steps = args.max_episodes * 11 
+
+    # Approx number of gradient updates (updates happen every train_frequency steps after learning_starts)
     approx_updates = max(1, (approx_env_steps - args.learning_starts) // args.train_frequency)
+
+    # Create scheduler (or None if lr_decay=none)
     scheduler = create_lr_scheduler(optimizer, args, total_updates=approx_updates)
+
+    # Counts how many gradient updates we actually performed (used for logging)
     update_count = 0
 
     # Basic Code continues
@@ -220,11 +275,14 @@ def run_dqn_lrdecay(args, use_tensorboard=False, use_wandb=False):
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-                # added for lr_decay
+                
+                # added for lr_decay: step scheduler AFTER each gradient update
+                # This ensures LR changes exactly once per parameter update
                 update_count += 1
                 if scheduler is not None:
                     scheduler.step()
-
+                    
+                # Optional: log current LR (helps show decay worked as intended)
                 if scheduler is not None and use_tensorboard and update_count % 100 == 0:
                     writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], update_count)
 
