@@ -1,4 +1,3 @@
-import torch 
 import torch.nn as nn
 from torch.distributions.categorical import Categorical
 import torch.nn.functional as F
